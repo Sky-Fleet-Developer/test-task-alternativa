@@ -19,7 +19,8 @@ namespace MyTestTask.Ranks.View
         [SerializeField] private ScrollRect scroll;
         
         [Header("Size detection")]
-        [Tooltip("it seems like a crutch, but it is the best, fastest and safest way to get global position of ui element border")]
+        //it seems like a crutch, but it is the best, fastest and safest way to get global position of ui element border
+        //(I was wrong, but the understanding came to me too late)
         [SerializeField] private RectTransform topScrollViewAnchor;
         [SerializeField] private RectTransform bottomScrollViewAnchor;
         [SerializeField] private RectTransform scrollViewCenterAnchor;
@@ -36,8 +37,15 @@ namespace MyTestTask.Ranks.View
         private int _currentRangeMax;
         private bool _refreshLoopInProgress;
         private bool _isDirty;
+        private Transform _myCanvas;
+        
+        //crutch to fix other crutch
+        private float AnchorsTolerance => anchorsTolerance * _myCanvas.localScale.y;
+        private float CentringTolerance => centringTolerance * _myCanvas.localScale.y;
+        
         private void Awake()
         {
+            _myCanvas = GetComponentInParent<Canvas>().transform;
             scroll.onValueChanged.AddListener(OnScrollValueChanged);
             _inputActions = new DefaultInputActions();
             _inputActions.UI.Enable();
@@ -226,23 +234,23 @@ namespace MyTestTask.Ranks.View
                 RecalculateHeight();
             }
             Vector3 topAnchor = topScrollViewAnchor.position;
-            while (_items.First.Value.IsBelowThen(topAnchor.y - anchorsTolerance) && _currentRangeMin > 0) // try to add first
+            while (_items.First.Value.IsBelowThen(topAnchor.y - AnchorsTolerance) && _currentRangeMin > 0) // try to add first
             {
                 var newItem = GetFromPoolOrCreate();
                 SetItemFirst(newItem, _dataSource.Get(--_currentRangeMin));
             }
-            while (_items.First.Value.IsAboveThen(topAnchor.y + anchorsTolerance) && _currentRangeMin < _currentRangeMax) //try to remove first
+            while (_items.First.Value.IsAboveThen(topAnchor.y + AnchorsTolerance) && _currentRangeMin < _currentRangeMax) //try to remove first
             {
                 RemoveFirstItem();
             }
             
             var bottomAnchor = bottomScrollViewAnchor.position;
-            while (_items.Last.Value.IsAboveThen(bottomAnchor.y + anchorsTolerance) && _currentRangeMax < _dataSource.Count - 1) // try to add last
+            while (_items.Last.Value.IsAboveThen(bottomAnchor.y + AnchorsTolerance) && _currentRangeMax < _dataSource.Count - 1) // try to add last
             {
                 var newItem = GetFromPoolOrCreate();
                 SetItemLast(newItem, _dataSource.Get(++_currentRangeMax));
             }
-            while (_items.Last.Value.IsBelowThen(bottomAnchor.y - anchorsTolerance) && _currentRangeMax > _currentRangeMin) // try to remove last
+            while (_items.Last.Value.IsBelowThen(bottomAnchor.y - AnchorsTolerance) && _currentRangeMax > _currentRangeMin) // try to remove last
             {
                 RemoveLastItem();
             }
@@ -270,10 +278,10 @@ namespace MyTestTask.Ranks.View
         private void OnItemSelected(IDataListFlexibleElement<Rank> item)
         {
             var delta = item.RectTransform.position.y - scrollViewCenterAnchor.position.y;
-            if (Mathf.Abs(delta) > centringTolerance)
+            if (Mathf.Abs(delta) > CentringTolerance)
             {
-                float deltaWithTolerance = delta - Mathf.Sign(delta) * centringTolerance;
-                scroll.content.anchoredPosition -= new Vector2(0, deltaWithTolerance);
+                float deltaWithTolerance = delta - Mathf.Sign(delta) * CentringTolerance;
+                scroll.content.position -= new Vector3(0, deltaWithTolerance, 0);
             }
         }
 

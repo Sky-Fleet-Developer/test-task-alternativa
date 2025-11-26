@@ -59,7 +59,6 @@ namespace MyTestTask.Ranks.View
                 SetCollapsed();
                 selectionIndicator.gameObject.SetActive(false);
             }
-
             base.OnEnable();
         }
         
@@ -75,6 +74,7 @@ namespace MyTestTask.Ranks.View
         
         public void SetData(Rank data)
         {
+            transform.localScale = Vector3.one;
             _data = data;
             sequenceIndexText.text = (_data.SequenceIndex+1).ToString("00") + ".";
             nameText.text = LocalizationService.Localize($"rank_{_data.Id}_name");
@@ -159,7 +159,7 @@ namespace MyTestTask.Ranks.View
             }
             else
             {
-                _expandingCoroutine = StartCoroutine(SetExpanded(value));
+                _expandingCoroutine = StartCoroutine(SetExpanded(_targetExpanded));
             }
         }
 
