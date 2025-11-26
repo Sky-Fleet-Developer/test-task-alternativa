@@ -19,6 +19,130 @@ MonoBehaviour:
     m_Key: rank_rookie_name
     m_Metadata:
       m_Items: []
+  - m_Id: 22824054059008
+    m_Key: rank_private_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 22826604195840
+    m_Key: rank_evfraitor_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 22828684570624
+    m_Key: rank_corporal_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 22832807571456
+    m_Key: rank_master-corporal_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23255907987456
+    m_Key: rank_sergeant_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23341589229568
+    m_Key: rank_staff-sergeant_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23450964094976
+    m_Key: rank_master-sergeant_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 64542342279168
+    m_Key: rank_first-sergeant_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 64673238118400
+    m_Key: rank_sergeant-major_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 64723573960704
+    m_Key: rank_warrant-officer-1_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 64798769442816
+    m_Key: rank_warrant-officer-2_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 64814036709376
+    m_Key: rank_warrant-officer-3_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 64871519645696
+    m_Key: rank_warrant-officer-4_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 64883934785536
+    m_Key: rank_warrant-officer-5_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 64897926983680
+    m_Key: rank_junior-lieutenant_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 64953056915456
+    m_Key: rank_lieutenant_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 64992118468608
+    m_Key: rank_senjor-lieutenant_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 64998594473984
+    m_Key: rank_captain_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 65065065803776
+    m_Key: rank_major_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 65066609307648
+    m_Key: rank_lieutenant-colonel_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 65076612722688
+    m_Key: rank_colonel_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 65077317365760
+    m_Key: rank_brigadier_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 65077782933504
+    m_Key: rank_major-general_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 65100469923840
+    m_Key: rank_lieutenant-general_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 65101103263744
+    m_Key: rank_general_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 65109596729344
+    m_Key: rank_marshal_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 65110129405952
+    m_Key: rank_field-marchal_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 65500216455168
+    m_Key: rank_commander_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 65503534149632
+    m_Key: rank_generalissimo_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 65534072877056
+    m_Key: rank_legend_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15762900011544
+    m_Key: next_rank_description
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

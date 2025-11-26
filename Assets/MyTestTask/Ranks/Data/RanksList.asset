@@ -14,7 +14,64 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ranks:
   - id: rookie
+    experienceLevel: 0
   - id: private
+    experienceLevel: 100
   - id: evfraitor
+    experienceLevel: 500
   - id: corporal
-  - id: master_corporal
+    experienceLevel: 1500
+  - id: master-corporal
+    experienceLevel: 3700
+  - id: sergeant
+    experienceLevel: 7100
+  - id: staff-sergeant
+    experienceLevel: 12300
+  - id: master-sergeant
+    experienceLevel: 20000
+  - id: first-sergeant
+    experienceLevel: 29000
+  - id: sergeant-major
+    experienceLevel: 41000
+  - id: warrant-officer-1
+    experienceLevel: 57000
+  - id: warrant-officer-2
+    experienceLevel: 76000
+  - id: warrant-officer-3
+    experienceLevel: 98000
+  - id: warrant-officer-4
+    experienceLevel: 125000
+  - id: warrant-officer-5
+    experienceLevel: 156000
+  - id: junior-lieutenant
+    experienceLevel: 192000
+  - id: lieutenant
+    experienceLevel: 233000
+  - id: senjor-lieutenant
+    experienceLevel: 280000
+  - id: captain
+    experienceLevel: 332000
+  - id: major
+    experienceLevel: 390000
+  - id: lieutenant-colonel
+    experienceLevel: 455000
+  - id: colonel
+    experienceLevel: 527000
+  - id: brigadier
+    experienceLevel: 606000
+  - id: major-general
+    experienceLevel: 692000
+  - id: lieutenant-general
+    experienceLevel: 787000
+  - id: general
+    experienceLevel: 889000
+  - id: marshal
+    experienceLevel: 1000000
+  - id: field-marchal
+    experienceLevel: 1122000
+  - id: commander
+    experienceLevel: 1255000
+  - id: generalissimo
+    experienceLevel: 1400000
+  - id: legend
+    experienceLevel: 1600000

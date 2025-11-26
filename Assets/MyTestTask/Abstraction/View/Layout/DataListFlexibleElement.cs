@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace MyTestTask.Abstraction.View.Layout
 {
@@ -7,8 +8,8 @@ namespace MyTestTask.Abstraction.View.Layout
         void SetPositionAsFirst();
         void SetPositionAfter(IDataListFlexibleElement<T> element);
         void SetPositionBefore(IDataListFlexibleElement<T> element);
-        void AddPositionCorrection(float correction);
-        bool IsBelowThen(Vector3 worldPoint);
-        bool IsAboveThen(Vector3 worldPoint);
+        bool IsBelowThen(float worldPoint);
+        bool IsAboveThen(float worldPoint);
+        event Action<IDataListFlexibleElement<T>> OnSelected;
     }
 }

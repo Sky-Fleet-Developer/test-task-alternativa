@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Threading.Tasks;
 using MyTestTask.Abstraction.View;
 using MyTestTask.Abstraction.View.Layout;
 using MyTestTask.Misc;
@@ -12,7 +14,7 @@ using UnityEngine.UI;
 
 namespace MyTestTask.Ranks.View
 {
-    public class RankView : Selectable, IDataListFlexibleElement<Rank>, ISelectable, IPointerClickHandler
+    public class RankView : Selectable, IDataListFlexibleElement<Rank>, IPointerClickHandler
     {
         [SerializeField] private Image icon;
         [SerializeField] private TextMeshProUGUI sequenceIndexText;
@@ -22,38 +24,23 @@ namespace MyTestTask.Ranks.View
         [SerializeField] private RectTransform dropDownArrow;
         [SerializeField] private float minSize;
         [SerializeField] private float maxSize;
+        [SerializeField] private float expansionDuration;
         [Header("Size detection")]
         [SerializeField] private RectTransform topAnchor;
         [SerializeField] private RectTransform bottomAnchor;
         private float _currentSize;
-        private SelectionProvider _selectionProvider;
         private Rank _data;
-        private bool _isSelected;
         private RectTransform _rectTransform;
-        private bool _selectionRegistered;
-        private ISelectable _prev;
-        private ISelectable _next;
-        private bool _isInSelectionState;
+        private bool _isExpanded;
+        private Coroutine _expandingCoroutine;
 
-        public float Size => _currentSize;
         public event Action<IFlexibleLayoutElement, float> OnSizeChanged;
+        public event Action<IDataListFlexibleElement<Rank>> OnSelected;
+        public float Size => _currentSize;
         public Rank Data => _data;
         public RectTransform RectTransform => _rectTransform;
 
-        public bool IsSelected
-        {
-            get => _isSelected;
-            set
-            {
-                if (EventSystem.current.currentSelectedGameObject != gameObject && !_isInSelectionState)
-                {
-                    EventSystem.current.SetSelectedGameObject(gameObject);
-                }
-                selectionIndicator.gameObject.SetActive(value);
-                _isSelected = value;
-            }
-        }
-
+        public bool IsSelected { get; set; }
         public int Order => transform.GetSiblingIndex();
         public bool IsValid => gameObject.activeSelf;
 
@@ -66,49 +53,22 @@ namespace MyTestTask.Ranks.View
 
         protected override void OnEnable()
         {
-            selectionIndicator.gameObject.SetActive(false);
-            EnsureSelectionProvider();
-            EnsureSelectionRegistered();
-            _isSelected = false;
+            if (Application.isPlaying)
+            {
+                SetCollapsed();
+                selectionIndicator.gameObject.SetActive(false);
+            }
+
             base.OnEnable();
         }
 
-        private void EnsureSelectionRegistered()
-        {
-            if (_selectionRegistered || !_selectionProvider)
-            {
-                return;
-            }
-            _selectionProvider.Register(this);
-            _selectionRegistered = true;
-        }
-
-        protected override void OnDisable()
-        {
-            _selectionProvider?.Unregister(this);
-            _selectionRegistered = false;
-            _prev = null;
-            _next = null;
-            base.OnDisable();
-        }
-
-        private void EnsureSelectionProvider()
-        {
-            if (_selectionProvider)
-            {
-                return;
-            }
-            _selectionProvider = GetComponentInParent<SelectionProvider>();
-        }
         
         public void SetData(Rank data)
         {
             _data = data;
-            EnsureSelectionProvider();
-            EnsureSelectionRegistered();
             sequenceIndexText.text = (_data.SequenceIndex+1).ToString("00") + ".";
             nameText.text = LocalizationService.Localize($"rank_{_data.Id}_name");
-            descriptionText.text = LocalizationService.Localize($"rank_{_data.Id}_description");
+            descriptionText.text = string.Format(LocalizationService.Localize($"next_rank_description"), _data.ExperienceLevel, _data.ExtToNextLevel);
             LoadIcon(_data.Id);
         }
 
@@ -116,9 +76,11 @@ namespace MyTestTask.Ranks.View
         {
             try
             {
-                icon.sprite = Resources.Load<Sprite>("rank_loading_icon"); // just imagine that we have the resources caching system and we use it here
+                icon.gameObject.SetActive(false);
+                // just imagine that we have the resources caching system and we use it here
                 var loadingOperation = Resources.LoadAsync<Sprite>($"rank_{id}_icon");
                 await loadingOperation;
+                icon.gameObject.SetActive(true);
                 icon.sprite = loadingOperation.asset as Sprite;
             }
             catch (Exception e)
@@ -129,46 +91,60 @@ namespace MyTestTask.Ranks.View
 
         public override void OnSelect(BaseEventData eventData)
         {
-            _isInSelectionState = true;
-            try
+            selectionIndicator.gameObject.SetActive(true);
+            base.OnSelect(eventData);
+            OnSelected?.Invoke(this);
+        }
+
+        public override void OnDeselect(BaseEventData eventData)
+        {
+            selectionIndicator.gameObject.SetActive(false);
+            base.OnDeselect(eventData);
+        }
+
+
+        public override void OnMove(AxisEventData eventData)
+        {
+            base.OnMove(eventData);
+            if (eventData.moveDir == MoveDirection.Right && !_isExpanded && _expandingCoroutine == null)
             {
-                _selectionProvider.SetSelected(this);
-                base.OnSelect(eventData);
+                _expandingCoroutine = StartCoroutine(SetExpanded(true));
             }
-            catch (Exception e)
+            else if (eventData.moveDir == MoveDirection.Left && _isExpanded && _expandingCoroutine == null)
             {
-                Debug.LogException(e);
-            }
-            finally
-            {
-                _isInSelectionState = false;
+                _expandingCoroutine = StartCoroutine(SetExpanded(false));
             }
         }
 
-        public void SetPrevNeighbour(ISelectable prev)
+        private IEnumerator SetExpanded(bool value)
         {
-            _prev = prev;
-        }
-        public void SetNextNeighbour(ISelectable next)
-        {
-            _next = next;
+            Vector3 arrowRotation = Vector3.forward * (value ? -90 : 90);
+            Vector3 initialArrowRotation = dropDownArrow.localEulerAngles;
+            Vector2 currentSize = _rectTransform.sizeDelta;
+            Vector2 targetSize = new Vector2(currentSize.x, value ? maxSize : minSize);
+            
+            foreach (float progress in TweenUtility.Tween(expansionDuration))
+            {
+                yield return null;
+                dropDownArrow.localEulerAngles = Vector3.Lerp(initialArrowRotation, arrowRotation, progress);
+                _rectTransform.sizeDelta = Vector2.Lerp(currentSize, targetSize, progress);
+                _currentSize = _rectTransform.sizeDelta.y;
+                OnSizeChanged?.Invoke(this, _currentSize);
+            }
+
+            _expandingCoroutine = null;
+            _isExpanded = value;
         }
 
-        //public override void OnMove(AxisEventData eventData)
-        //{
-        //    base.OnMove(eventData);
-        //    if (_isSelected)
-        //    {
-        //        if (eventData.moveDir == MoveDirection.Down && _prev != null)
-        //        {
-        //            _selectionProvider.SetSelected(_prev);
-        //        }
-        //        else if (eventData.moveDir == MoveDirection.Up && _next != null)
-        //        {
-        //            _selectionProvider.SetSelected(_next);
-        //        }
-        //    }
-        //}
+        private void SetCollapsed()
+        {
+            dropDownArrow.localEulerAngles = Vector3.forward * 90;
+            _rectTransform.sizeDelta = new Vector2(_rectTransform.sizeDelta.x, minSize);;
+            _currentSize = minSize;
+            OnSizeChanged?.Invoke(this, _currentSize);
+            _expandingCoroutine = null;
+            _isExpanded = false;
+        }
         
         public void SetPositionAsFirst()
         {
@@ -184,13 +160,8 @@ namespace MyTestTask.Ranks.View
 
         public void SetPositionBefore(IDataListFlexibleElement<Rank> element)
         {
-            _rectTransform.anchoredPosition = element.RectTransform.anchoredPosition + Vector2.down * Size;
+            _rectTransform.anchoredPosition = element.RectTransform.anchoredPosition + Vector2.up * Size;
             RefreshWidth();
-        }
-
-        public void AddPositionCorrection(float correction)
-        {
-            _rectTransform.anchoredPosition += Vector2.up * correction;
         }
 
         private void RefreshWidth()
@@ -198,19 +169,22 @@ namespace MyTestTask.Ranks.View
             _rectTransform.sizeDelta = new Vector2(0, _rectTransform.sizeDelta.y);
         }
 
-        public bool IsBelowThen(Vector3 worldPoint)
+        public bool IsBelowThen(float worldPoint)
         {
-            return topAnchor.position.y < worldPoint.y;
+            return topAnchor.position.y < worldPoint;
         }
 
-        public bool IsAboveThen(Vector3 worldPoint)
+        public bool IsAboveThen(float worldPoint)
         {
-            return bottomAnchor.position.y > worldPoint.y;
+            return bottomAnchor.position.y > worldPoint;
         }
-
+        
         public void OnPointerClick(PointerEventData eventData)
         {
-            _selectionProvider.SetSelected(this);
+            if (_expandingCoroutine == null)
+            {
+                _expandingCoroutine = StartCoroutine(SetExpanded(!_isExpanded));
+            }
         }
     }
 }

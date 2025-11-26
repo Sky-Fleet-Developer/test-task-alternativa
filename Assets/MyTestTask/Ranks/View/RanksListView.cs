@@ -20,7 +20,10 @@ namespace MyTestTask.Ranks.View
         [Tooltip("it seems like a crutch, but it is the best, fastest and safest way to get global position of ui element border")]
         [SerializeField] private RectTransform topScrollViewAnchor;
         [SerializeField] private RectTransform bottomScrollViewAnchor;
-        
+        [SerializeField] private RectTransform scrollViewCenterAnchor;
+        [SerializeField] private float anchorsTolerance;
+        [SerializeField] private float centringTolerance;
+
         private IDataSource<Rank> _dataSource;
         private IFactory<IDataListFlexibleElement<Rank>> _factory;
         private List<IDataListFlexibleElement<Rank>> _pool = new();
@@ -29,6 +32,20 @@ namespace MyTestTask.Ranks.View
         private float _currentHeight;
         private int _currentRangeMin;
         private int _currentRangeMax;
+        private bool _refreshLoopInProgress;
+        private void Awake()
+        {
+            _scrollValue = scroll.verticalNormalizedPosition;
+        }
+
+        private void Update()
+        {
+            if (!Mathf.Approximately(_scrollValue, scroll.verticalNormalizedPosition))
+            {
+                _scrollValue = scroll.verticalNormalizedPosition;
+                RefreshLoop();
+            }
+        }
 
         public void Inject(DiContainer container)
         {
@@ -47,6 +64,11 @@ namespace MyTestTask.Ranks.View
         // apparently, transform.position of new items is not update immediately. We have to wait and check again 
         private async void RefreshLoop()
         {
+            if (_refreshLoopInProgress)
+            {
+                return;
+            }
+            _refreshLoopInProgress = true;
             float prevSize = 0;
             do
             {
@@ -59,6 +81,7 @@ namespace MyTestTask.Ranks.View
                 OnDimensionsChanged();
             }
             while (!Mathf.Approximately(prevSize, _currentHeight));
+            _refreshLoopInProgress = false;
         }
 
         private void RefreshView()
@@ -90,7 +113,7 @@ namespace MyTestTask.Ranks.View
             var pointer = element.Next;
             while (pointer != null)
             {
-                pointer.Value.AddPositionCorrection(-delta);
+                pointer.Value.SetPositionAfter(pointer.Previous!.Value);
                 pointer = pointer.Next;
             }
         }
@@ -99,7 +122,6 @@ namespace MyTestTask.Ranks.View
         {
             item.SetData(data);
             item.SetPositionAfter(_items.Last.Value);
-            item.OnSizeChanged += OnItemSizeChanged;
             item.RectTransform.SetAsLastSibling();
             _items.AddLast(item);
             RecalculateHeight();
@@ -109,15 +131,50 @@ namespace MyTestTask.Ranks.View
         {
             item.SetData(data);
             item.SetPositionBefore(_items.First.Value);
-            item.OnSizeChanged += OnItemSizeChanged;
             item.RectTransform.SetAsFirstSibling();
             _items.AddFirst(item);
+            MoveAllToZero();
             RecalculateHeight();
+        }
+
+        private void RemoveFirstItem()
+        {
+            _currentRangeMin++;
+            RemoveItem(_items.First.Value);
+            if (_items.Count > 0)
+            {
+                MoveAllToZero();
+            }
+            RecalculateHeight();
+        }
+
+        private void RemoveLastItem()
+        {
+            _currentRangeMax--;
+            RemoveItem(_items.Last.Value);
+            RecalculateHeight();
+        }
+
+        private void MoveAllToZero()
+        {
+            var firstElementPosition = _items.First.Value.RectTransform.position.y;
+            _items.First.Value.SetPositionAsFirst();
+            var pointer = _items.First.Next;
+            while (pointer != null)
+            {
+                pointer.Value.SetPositionAfter(pointer.Previous!.Value);
+                pointer = pointer.Next;
+            }
+            float delta = _items.First.Value.RectTransform.position.y - firstElementPosition;
+            scroll.content.anchoredPosition -= new Vector2(0, delta);
+            _scrollValue = scroll.verticalNormalizedPosition;
         }
 
         private void RemoveItem(IDataListFlexibleElement<Rank> item)
         {
             item.OnSizeChanged -= OnItemSizeChanged;
+            item.OnSelected -= OnItemSelected;
+
             _items.Remove(item);
             item.gameObject.SetActive(false);
             _pool.Add(item);
@@ -133,45 +190,71 @@ namespace MyTestTask.Ranks.View
                 _currentHeight += pointer.Value.Size;
                 pointer = pointer.Next;
             }
+            scroll.content.sizeDelta = new Vector2(0, _currentHeight);
 
             return !Mathf.Approximately(prevHeight, _currentHeight);
         }
 
-        private  void OnDimensionsChanged()
+        private void OnDimensionsChanged()
         {
             if (_items.Count == 0)
             {
                 var newItem = GetFromPoolOrCreate();
                 newItem.SetData(_dataSource.Get(_currentRangeMin));
                 newItem.SetPositionAsFirst();
-                newItem.OnSizeChanged += OnItemSizeChanged;
                 _items.AddFirst(newItem);
                 RecalculateHeight();
             }
             Vector3 topAnchor = topScrollViewAnchor.position;
-                while (_items.First.Value.IsBelowThen(topAnchor) && _currentRangeMin > 1)
+            while (_items.First.Value.IsBelowThen(topAnchor.y - anchorsTolerance) && _currentRangeMin > 0) // try to add first
             {
                 var newItem = GetFromPoolOrCreate();
                 SetItemFirst(newItem, _dataSource.Get(--_currentRangeMin));
             }
+            while (_items.First.Value.IsAboveThen(topAnchor.y + anchorsTolerance) && _currentRangeMin < _currentRangeMax) //try to remove first
+            {
+                RemoveFirstItem();
+            }
+            
             var bottomAnchor = bottomScrollViewAnchor.position;
-            while (_items.Last.Value.IsAboveThen(bottomAnchor) && _currentRangeMax < _dataSource.Count)
+            while (_items.Last.Value.IsAboveThen(bottomAnchor.y + anchorsTolerance) && _currentRangeMax < _dataSource.Count - 1) // try to add last
             {
                 var newItem = GetFromPoolOrCreate();
                 SetItemLast(newItem, _dataSource.Get(++_currentRangeMax));
+            }
+            while (_items.Last.Value.IsBelowThen(bottomAnchor.y - anchorsTolerance) && _currentRangeMax > _currentRangeMin) // try to remove last
+            {
+                RemoveLastItem();
             }
         }
 
         private IDataListFlexibleElement<Rank> GetFromPoolOrCreate()
         {
+            IDataListFlexibleElement<Rank> result;
             if (_pool.Count == 0)
             {
-                return CreateItem();
+                result = CreateItem();
             }
-            
-            var result = _pool[^1];
-            _pool.RemoveAt(_pool.Count - 1);
+            else
+            {
+
+                result = _pool[^1];
+                _pool.RemoveAt(_pool.Count - 1);
+                result.gameObject.SetActive(true);
+            }
+            result.OnSizeChanged += OnItemSizeChanged;
+            result.OnSelected += OnItemSelected;
             return result;
+        }
+
+        private void OnItemSelected(IDataListFlexibleElement<Rank> item)
+        {
+            var delta = item.RectTransform.position.y - scrollViewCenterAnchor.position.y;
+            if (Mathf.Abs(delta) > centringTolerance)
+            {
+                float deltaWithTolerance = delta - Mathf.Sign(delta) * centringTolerance;
+                scroll.content.anchoredPosition -= new Vector2(0, deltaWithTolerance);
+            }
         }
 
         private IDataListFlexibleElement<Rank> CreateItem()

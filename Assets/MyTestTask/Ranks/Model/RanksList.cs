@@ -17,6 +17,13 @@ namespace MyTestTask.Ranks.Model
             {
                 ranks[i].SetSequenceIndex(i);
             }
+            int exp = 0;
+            for (var i = 1; i < ranks.Length; i++)
+            {
+                int expToNextLevel = ranks[i].ExperienceLevel - exp;
+                ranks[i].SetExtToNextLevel(expToNextLevel);
+                exp = ranks[i].ExperienceLevel;
+            }
         }
 
         public IEnumerable<Rank> EnumerateRange(int start, int count)
