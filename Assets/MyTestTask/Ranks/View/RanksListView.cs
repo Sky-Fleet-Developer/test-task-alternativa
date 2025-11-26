@@ -8,6 +8,8 @@ using MyTestTask.Abstraction.View;
 using MyTestTask.Abstraction.View.Layout;
 using MyTestTask.Ranks.Model;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace MyTestTask.Ranks.View
@@ -28,22 +30,41 @@ namespace MyTestTask.Ranks.View
         private IFactory<IDataListFlexibleElement<Rank>> _factory;
         private List<IDataListFlexibleElement<Rank>> _pool = new();
         private LinkedList<IDataListFlexibleElement<Rank>> _items = new();
-        private float _scrollValue;
+        private DefaultInputActions _inputActions;
         private float _currentHeight;
         private int _currentRangeMin;
         private int _currentRangeMax;
         private bool _refreshLoopInProgress;
+        private bool _isDirty;
         private void Awake()
         {
-            _scrollValue = scroll.verticalNormalizedPosition;
+            scroll.onValueChanged.AddListener(OnScrollValueChanged);
+            _inputActions = new DefaultInputActions();
+            _inputActions.UI.Enable();
+        }
+
+        public void OnScrollValueChanged(Vector2 value)
+        {
+            if (_inputActions.UI.Click.IsPressed())
+            {
+                return;
+            }
+
+            RefreshView();
         }
 
         private void Update()
         {
-            if (!Mathf.Approximately(_scrollValue, scroll.verticalNormalizedPosition))
+            if (_inputActions.UI.Click.IsPressed())
             {
-                _scrollValue = scroll.verticalNormalizedPosition;
-                RefreshLoop();
+                _isDirty = true;
+                return;
+            }
+            
+            if (_isDirty)
+            {
+                _isDirty = false;
+                RefreshView();
             }
         }
 
@@ -58,7 +79,7 @@ namespace MyTestTask.Ranks.View
         public void SetDataSource(IDataSource<Rank> dataSource)
         {
             _dataSource = dataSource;
-            RefreshView();
+            RefreshLoop();
         }
 
         // apparently, transform.position of new items is not update immediately. We have to wait and check again 
@@ -72,15 +93,15 @@ namespace MyTestTask.Ranks.View
             float prevSize = 0;
             do
             {
-                float t = Time.realtimeSinceStartup;
-                while (Time.realtimeSinceStartup - t < Time.deltaTime)
+                float t = Time.time;
+                while (Time.time - t < Time.deltaTime)
                 {
                     await Task.Yield();
                 }
                 prevSize = _currentHeight;
                 OnDimensionsChanged();
             }
-            while (!Mathf.Approximately(prevSize, _currentHeight));
+            while (!Mathf.Approximately(prevSize, _currentHeight) || _currentHeight < (topScrollViewAnchor.position.y - bottomScrollViewAnchor.position.y) * 0.5f);
             _refreshLoopInProgress = false;
         }
 
@@ -91,7 +112,12 @@ namespace MyTestTask.Ranks.View
                 Debug.LogError("DataSource is null");
                 return;
             }
-            RefreshLoop();
+            OnDimensionsChanged();
+            if (_items.Count > 0 && !Mathf.Approximately(_items.First.Value.RectTransform.localPosition.y, 0))
+            {
+                MoveAllToZero();
+                RecalculateHeight();
+            }
         }
 
         private void OnItemSizeChanged(IFlexibleLayoutElement item, float size)
@@ -133,7 +159,6 @@ namespace MyTestTask.Ranks.View
             item.SetPositionBefore(_items.First.Value);
             item.RectTransform.SetAsFirstSibling();
             _items.AddFirst(item);
-            MoveAllToZero();
             RecalculateHeight();
         }
 
@@ -141,10 +166,6 @@ namespace MyTestTask.Ranks.View
         {
             _currentRangeMin++;
             RemoveItem(_items.First.Value);
-            if (_items.Count > 0)
-            {
-                MoveAllToZero();
-            }
             RecalculateHeight();
         }
 
@@ -167,7 +188,6 @@ namespace MyTestTask.Ranks.View
             }
             float delta = _items.First.Value.RectTransform.position.y - firstElementPosition;
             scroll.content.anchoredPosition -= new Vector2(0, delta);
-            _scrollValue = scroll.verticalNormalizedPosition;
         }
 
         private void RemoveItem(IDataListFlexibleElement<Rank> item)
@@ -278,6 +298,8 @@ namespace MyTestTask.Ranks.View
             {
                 Destroy(element.gameObject); // we could move method out from here, for example, to the factory
             }
+            _inputActions.UI.Disable();
+            _inputActions.Dispose();
         }
     }
 }

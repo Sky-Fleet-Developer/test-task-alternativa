@@ -32,6 +32,7 @@ namespace MyTestTask.Ranks.View
         private Rank _data;
         private RectTransform _rectTransform;
         private bool _isExpanded;
+        private bool _targetExpanded;
         private Coroutine _expandingCoroutine;
 
         public event Action<IFlexibleLayoutElement, float> OnSizeChanged;
@@ -61,6 +62,15 @@ namespace MyTestTask.Ranks.View
 
             base.OnEnable();
         }
+        
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+            if (EventSystem.current.currentSelectedGameObject == gameObject)
+            {
+                EventSystem.current.SetSelectedGameObject(EventSystem.current.firstSelectedGameObject);
+            }
+        }
 
         
         public void SetData(Rank data)
@@ -77,7 +87,7 @@ namespace MyTestTask.Ranks.View
             try
             {
                 icon.gameObject.SetActive(false);
-                // just imagine that we have the resources caching system and we use it here
+                // just imagine that we have the resources caching system, and we use it right here
                 var loadingOperation = Resources.LoadAsync<Sprite>($"rank_{id}_icon");
                 await loadingOperation;
                 icon.gameObject.SetActive(true);
@@ -99,6 +109,7 @@ namespace MyTestTask.Ranks.View
         public override void OnDeselect(BaseEventData eventData)
         {
             selectionIndicator.gameObject.SetActive(false);
+            TeySetExpanded(false);
             base.OnDeselect(eventData);
         }
 
@@ -108,11 +119,20 @@ namespace MyTestTask.Ranks.View
             base.OnMove(eventData);
             if (eventData.moveDir == MoveDirection.Right && !_isExpanded && _expandingCoroutine == null)
             {
-                _expandingCoroutine = StartCoroutine(SetExpanded(true));
+                TeySetExpanded(true);
             }
-            else if (eventData.moveDir == MoveDirection.Left && _isExpanded && _expandingCoroutine == null)
+            else if (eventData.moveDir == MoveDirection.Left && _isExpanded)
             {
-                _expandingCoroutine = StartCoroutine(SetExpanded(false));
+                TeySetExpanded(false);
+            }
+        }
+        
+        private void TeySetExpanded(bool value)
+        {
+            _targetExpanded = value;
+            if (_expandingCoroutine == null)
+            {
+                _expandingCoroutine = StartCoroutine(SetExpanded(value));
             }
         }
 
@@ -132,8 +152,15 @@ namespace MyTestTask.Ranks.View
                 OnSizeChanged?.Invoke(this, _currentSize);
             }
 
-            _expandingCoroutine = null;
             _isExpanded = value;
+            if (_targetExpanded == _isExpanded)
+            {
+                _expandingCoroutine = null;
+            }
+            else
+            {
+                _expandingCoroutine = StartCoroutine(SetExpanded(value));
+            }
         }
 
         private void SetCollapsed()
@@ -183,7 +210,7 @@ namespace MyTestTask.Ranks.View
         {
             if (_expandingCoroutine == null)
             {
-                _expandingCoroutine = StartCoroutine(SetExpanded(!_isExpanded));
+                TeySetExpanded(!_isExpanded);
             }
         }
     }

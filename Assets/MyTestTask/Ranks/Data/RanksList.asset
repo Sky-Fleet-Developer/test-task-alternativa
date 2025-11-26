@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ranks:
   - id: rookie
-    experienceLevel: 0
+    experienceLevel: 1
   - id: private
     experienceLevel: 100
   - id: evfraitor
@@ -75,3 +75,4 @@ MonoBehaviour:
     experienceLevel: 1400000
   - id: legend
     experienceLevel: 1600000
+  lastRankExpToNextLevel: 200000
